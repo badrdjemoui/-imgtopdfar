@@ -8,21 +8,23 @@ import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 
+// واجهة التطبيق الرئيسية لتحويل الصور إلى PDF
 class ImageToPdfScreen extends StatefulWidget {
   @override
   _ImageToPdfScreenState createState() => _ImageToPdfScreenState();
 }
 
 class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
-  final picker = ImagePicker();
-  List<File> _images = [];
-  List<Uint8List?> _compressedImages = [];
-  List<int> _imageSizes = [];
-  double _quality = 70.0;
-  double _resizeFactor = 1.0;
-  int _imagesPerPage = 1;
-  String? _savedPdfPath;
+  final picker = ImagePicker(); // كائن لاختيار الصور
+  List<File> _images = []; // قائمة الصور الأصلية
+  List<Uint8List?> _compressedImages = []; // قائمة الصور المضغوطة
+  List<int> _imageSizes = []; // قائمة أحجام الصور بعد الضغط
+  double _quality = 70.0; // جودة الصورة المضغوطة
+  double _resizeFactor = 1.0; // نسبة تقليل الحجم
+  int _imagesPerPage = 1; // عدد الصور في كل صفحة من PDF
+  String? _savedPdfPath; // مسار ملف PDF المحفوظ
 
+  // دالة لاختيار الصور من المعرض
   Future<void> pickImages() async {
     final pickedFiles = await picker.pickMultiImage();
     if (pickedFiles != null) {
@@ -30,6 +32,7 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
       List<Uint8List?> compressedList = [];
       List<int> sizesList = [];
 
+      // ضغط كل صورة وحساب حجمها الجديد
       for (var file in originalFiles) {
         Uint8List? compressed = await compressImage(file, _quality.toInt(), _resizeFactor);
         compressedList.add(compressed);
@@ -44,6 +47,7 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
     }
   }
 
+  // دالة لضغط الصور
   Future<Uint8List?> compressImage(File file, int quality, double resizeFactor) async {
     Uint8List? result = await FlutterImageCompress.compressWithFile(
       file.absolute.path,
@@ -55,6 +59,7 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
     return result;
   }
 
+  // دالة لحذف صورة من القائمة
   void removeImage(int index) {
     setState(() {
       _images.removeAt(index);
@@ -63,6 +68,7 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
     });
   }
 
+  // دالة لإعادة ضغط الصور بعد تغيير الجودة أو الحجم
   Future<void> reprocessImages() async {
     List<Uint8List?> updatedCompressedImages = [];
     List<int> updatedSizes = [];
@@ -71,16 +77,15 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
       updatedCompressedImages.add(compressed);
       updatedSizes.add(compressed?.lengthInBytes ?? 0);
     }
-
     setState(() {
       _compressedImages = updatedCompressedImages;
       _imageSizes = updatedSizes;
     });
   }
 
+  // دالة لتحويل الصور المضغوطة إلى ملف PDF
   Future<void> convertToPdf() async {
     if (_compressedImages.isEmpty) return;
-
     final pdf = pw.Document();
     int pageCount = (_compressedImages.length / _imagesPerPage).ceil();
 
@@ -109,6 +114,7 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
     );
   }
 
+  // تحسين جودة الصور إلى الحد الأقصى
   void enhanceImageQuality() {
     setState(() {
       _quality = 100.0;
@@ -124,109 +130,58 @@ class _ImageToPdfScreenState extends State<ImageToPdfScreen> {
       appBar: AppBar(
         title: Text('تحويل الصور إلى PDF'),
         backgroundColor: Colors.blueAccent,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.info_outline),
-            onPressed: () {
-              showAboutDialog(
-                context: context,
-                applicationName: 'Image to PDF Converter',
-                applicationVersion: '1.1.0',
-                applicationLegalese: '0668704231 تم التطوير بواسطة المهندس جموعي بدر',
-              );
-            },
-          )
-        ],
       ),
       body: Column(
         children: [
           Expanded(
             child: _images.isNotEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: GridView.builder(
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        crossAxisSpacing: 8,
-                        mainAxisSpacing: 8,
-                      ),
-                      itemCount: _images.length,
-                      itemBuilder: (context, index) {
-                        return Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Column(
-                                children: [
-                                  Expanded(
-                                    child: Image.file(_images[index], fit: BoxFit.cover, width: double.infinity),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(4.0),
-                                    child: Text(
-                                      "الحجم: ${( _imageSizes[index] / 1024).toStringAsFixed(2)} KB",
-                                      style: TextStyle(fontSize: 12, color: Colors.black),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Positioned(
-                              top: 5,
-                              right: 5,
-                              child: GestureDetector(
-                                onTap: () => removeImage(index),
-                                child: CircleAvatar(
-                                  backgroundColor: Colors.red,
-                                  radius: 12,
-                                  child: Icon(Icons.close, size: 18, color: Colors.white),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
+                ? GridView.builder(
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
                     ),
+                    itemCount: _images.length,
+                    itemBuilder: (context, index) {
+                      return Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Column(
+                              children: [
+                                Expanded(
+                                  child: Image.file(_images[index], fit: BoxFit.cover, width: double.infinity),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(4.0),
+                                  child: Text(
+                                    "الحجم: ${( _imageSizes[index] / 1024).toStringAsFixed(2)} KB",
+                                    style: TextStyle(fontSize: 12, color: Colors.black),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            top: 5,
+                            right: 5,
+                            child: GestureDetector(
+                              onTap: () => removeImage(index),
+                              child: CircleAvatar(
+                                backgroundColor: Colors.red,
+                                radius: 12,
+                                child: Icon(Icons.close, size: 18, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
                   )
                 : Center(child: Text('اختر صورًا', style: TextStyle(fontSize: 18))),
           ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              children: [
-                ElevatedButton(onPressed: pickImages, child: Text("تحميل الصور")),
-                ElevatedButton(onPressed: convertToPdf, child: Text("تحويل إلى PDF")),
-                ElevatedButton(onPressed: enhanceImageQuality, child: Text("تحسين جودة الصور")),
-                if (_savedPdfPath != null)
-                  ElevatedButton(
-                    onPressed: () => Printing.sharePdf(bytes: File(_savedPdfPath!).readAsBytesSync(), filename: 'converted_images.pdf'),
-                    child: Text("مشاركة PDF"),
-                  ),
-                Slider(
-                  value: _quality,
-                  min: 10,
-                  max: 100,
-                  divisions: 9,
-                  label: "جودة: ${_quality.toInt()}%",
-                  onChanged: (value) async {
-                    setState(() => _quality = value);
-                    await reprocessImages();
-                  },
-                ),
-                Slider(
-                  value: _resizeFactor,
-                  min: 0.1,
-                  max: 1.0,
-                  divisions: 9,
-                  label: "حجم الصورة: ${(_resizeFactor * 100).toInt()}%",
-                  onChanged: (value) async {
-                    setState(() => _resizeFactor = value);
-                    await reprocessImages();
-                  },
-                ),
-              ],
-            ),
-          ),
+          ElevatedButton(onPressed: pickImages, child: Text("تحميل الصور")),
+          ElevatedButton(onPressed: convertToPdf, child: Text("تحويل إلى PDF")),
         ],
       ),
     );
